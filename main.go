@@ -2,10 +2,12 @@ package main
 
 import (
 	cli "github.com/jawher/mow.cli"
+	log "github.com/sirupsen/logrus"
 
-	"log"
 	"os"
 )
+
+var gitHash = "overriden at compile time"
 
 const (
 	appName = "qiita-advent-calendar-2019"
@@ -16,10 +18,10 @@ func main() {
 	app := cli.App(appName, appDesc)
 
 	app.Action = func() {
-		log.Println("Hello, world")
+		log.WithField("git_hash", gitHash).Println("Hello, world")
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		log.WithError(err).Fatal("app run")
 	}
 }
