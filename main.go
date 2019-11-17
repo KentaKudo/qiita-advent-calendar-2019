@@ -7,7 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
+	"os/signal"
 	"strconv"
+	"syscall"
 
 	"os"
 )
@@ -43,9 +45,14 @@ func main() {
 			}
 		}()
 
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
 		select {
 		case err := <-errCh:
 			log.Println(err)
+		case <-sigCh:
+			log.Println("termination signal received. attempt graceful shutdown")
 		}
 
 		log.Println("bye")
