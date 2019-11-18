@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: &app qiita-advent-calendar-2019
+  namespace: &ns qiita
+  labels:
+    app: *app
+spec:
+  ports:
+  - name: srv
+    protocol: TCP
+    port: 8080
+  selector:
+    app: *app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: &app qiita-advent-calendar-2019
+  namespace: &ns qiita
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: *app
+  template:
+    metadata:
+      namespace: *ns
+      labels:
+        app: *app
+    spec:
+      containers:
+      - name: *app
+        image: kentakudo/qiita-advent-calendar-2019:latest
+        env:
+        - name: SRV_PORT
+          value: "8080"
+        ports:
+        - containerPort: 8080
+          name: srv
