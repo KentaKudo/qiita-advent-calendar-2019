@@ -28,6 +28,13 @@ test:
 $(SERVICE):
 	go build -ldflags '$(LINKFLAGS)' .	
 
+.PHONY: build
+build: $(SERVICE)
+
 .PHONY: clean
 clean:
 	@rm -f $(SERVICE)
+
+.PHONY: all
+all: install lint test clean build
+
