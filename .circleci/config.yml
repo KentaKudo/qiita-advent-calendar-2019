@@ -16,7 +16,6 @@ jobs:
     - checkout
     - run: make all
     - setup_remote_docker:
-        docker_layer_caching: true
     - run: make docker-build
 
 workflows:
