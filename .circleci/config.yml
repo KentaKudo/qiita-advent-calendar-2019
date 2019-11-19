@@ -1,0 +1,36 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/qiita-advent-calendar-2019
+    docker:
+    - image: circleci/golang:1
+    steps:
+    - checkout
+    - run: make all
+
+  deploy:
+    working_directory: ~/qiita-advent-calendar-2019
+    docker:
+    - image: circleci/golang:1
+    steps:
+    - checkout
+    - run: make all
+    - setup_remote_docker:
+        docker_layer_caching: true
+    - run: make docker-build
+
+workflows:
+  version: 2
+  development:
+    jobs:
+    - build:
+        filters:
+          branches:
+            ignore: master
+  deployment:
+    jobs:
+    - deploy:
+        filters:
+          branches:
+            only: master
+
