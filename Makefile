@@ -59,3 +59,14 @@ docker-build: docker-image docker-auth
 	docker tag $(DOCKER_REPOSITORY):$(DOCKER_IMAGE_TAG) $(DOCKER_REPOSITORY):latest
 	docker push $(DOCKER_REPOSITORY)
 
+
+K8S_NAMESPACE=qiita
+K8S_DEPLOYMENT_NAME=$(SERVICE)
+K8S_CONTAINER_NAME=$(SERVICE)
+K8S_URL=https://<dev env>/apis/apps/v1/namespaces/$(K8S_NAMESPACE)/deployments/$(K8S_DEPLOYMENT_NAME)
+K8S_PAYLOAD={"spec":{"template":{"spec":{"containers":[{"name":"$(K8S_CONTAINER_NAME)","image":"$(DOCKER_REPOSITORY):$(DOCKER_IMAGE_TAG)"}]}}}}
+
+.PHONY: kubernetes-push
+kubernetes-push:
+	test "$(shell curl -o /dev/null -w '%{http_code}' -s -X PATCH -k -d '$(K8S_PAYLOAD)' -H 'Content-Type: application/strategic-merge-patch+json' -H 'Authorization: Bearer $(K8S_AUTH_TOKEN)' '$(K8S_URL)')" -eq "200"
+
