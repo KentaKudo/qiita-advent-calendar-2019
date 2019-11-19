@@ -19,6 +19,12 @@ LINT_FLAGS :=--enable golint,unconvert,unparam,gofmt
 lint: $(LINTER)
 	$(LINTER) run $(LINT_FLAGS)
 
+TEST_FLAGS := -v -cover -timeout 30s
+
+.PHONY: test
+test:
+	go test $(TEST_FLAGS) ./...
+
 $(SERVICE):
 	go build -ldflags '$(LINKFLAGS)' .	
 
