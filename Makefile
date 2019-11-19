@@ -50,3 +50,12 @@ docker-image:
 	docker build -t $(DOCKER_REPOSITORY):$(DOCKER_IMAGE_TAG) . \
 	  --build-arg SERVICE=$(SERVICE)
 
+.PHONY: docker-auth
+docker-auth:
+	@docker login -u $(DOCKER_ID) -p $(DOCKER_PASSWORD) $(DOCKER_REGISTRY)
+
+.PHONY: docker-build
+docker-build: docker-image docker-auth
+	docker tag $(DOCKER_REPOSITORY):$(DOCKER_IMAGE_TAG) $(DOCKER_REPOSITORY):latest
+	docker push $(DOCKER_REPOSITORY)
+
