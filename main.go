@@ -69,5 +69,6 @@ func newOpHandler() http.Handler {
 		AddChecker("dummy health check", func(cr *op.CheckResponse) {
 			cr.Healthy("I'm healthy!")
 		}).
-		ReadyUseHealthCheck())
+		ReadyUseHealthCheck().
+		WithInstrumentedChecks())
 }
