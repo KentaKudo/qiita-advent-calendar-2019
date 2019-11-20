@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
-	cli "github.com/jawher/mow.cli"
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
+	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 
-	"os"
+	cli "github.com/jawher/mow.cli"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 var gitHash = "overriden at compile time"
@@ -61,4 +61,8 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.WithError(err).Fatal("app run")
 	}
+}
+
+func newOpHandler() http.Handler {
+	return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {})
 }
