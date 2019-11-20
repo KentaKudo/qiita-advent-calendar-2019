@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -12,6 +11,7 @@ import (
 	cli "github.com/jawher/mow.cli"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"github.com/utilitywarehouse/go-operational/op"
 )
 
 var gitHash = "overriden at compile time"
@@ -37,9 +37,7 @@ func main() {
 		errCh := make(chan error, 1)
 
 		go func() {
-			http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprintln(w, "Hello, world")
-			})
+			http.Handle("/__/", newOpHandler())
 			if err := http.ListenAndServe(net.JoinHostPort("", strconv.Itoa(*srvPort)), nil); err != nil {
 				errCh <- errors.Wrap(err, "server")
 			}
@@ -64,5 +62,5 @@ func main() {
 }
 
 func newOpHandler() http.Handler {
-	return http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {})
+	return op.NewHandler(op.NewStatus(appName, appDesc))
 }
