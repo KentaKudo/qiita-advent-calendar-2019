@@ -64,6 +64,8 @@ func main() {
 func newOpHandler() http.Handler {
 	return op.NewHandler(op.
 		NewStatus(appName, appDesc).
+		AddOwner("qiita-advent-calendar-team", "#qiita-advent-calendar-2019").
+		SetRevision(gitHash).
 		AddChecker("dummy health check", func(cr *op.CheckResponse) {
 			cr.Healthy("I'm healthy!")
 		}).
