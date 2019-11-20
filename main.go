@@ -62,5 +62,9 @@ func main() {
 }
 
 func newOpHandler() http.Handler {
-	return op.NewHandler(op.NewStatus(appName, appDesc))
+	return op.NewHandler(op.
+		NewStatus(appName, appDesc).
+		AddChecker("dummy health check", func(cr *op.CheckResponse) {
+			cr.Healthy("I'm healthy!")
+		}))
 }
