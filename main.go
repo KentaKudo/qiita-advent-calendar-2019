@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 
 	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/service"
@@ -59,7 +60,11 @@ func main() {
 			}
 		}()
 
+		var wg sync.WaitGroup
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
+
 			if err := gSrv.Serve(lis); err != nil {
 				errCh <- errors.Wrap(err, "gRPC server")
 			}
@@ -74,6 +79,8 @@ func main() {
 		case <-sigCh:
 			log.Println("termination signal received. attempt graceful shutdown")
 		}
+		gSrv.GracefulStop()
+		wg.Wait()
 
 		log.Println("bye")
 	}
