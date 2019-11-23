@@ -8,10 +8,12 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/service"
 	cli "github.com/jawher/mow.cli"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/utilitywarehouse/go-operational/op"
+	"google.golang.org/grpc"
 )
 
 var gitHash = "overriden at compile time"
@@ -30,16 +32,36 @@ func main() {
 		EnvVar: "SRV_PORT",
 		Value:  8080,
 	})
+	grpcPort := app.Int(cli.IntOpt{
+		Name:   "grpc-port",
+		Desc:   "gRPC server port",
+		EnvVar: "GRPC_PORT",
+		Value:  8090,
+	})
 
 	app.Action = func() {
 		log.WithField("git_hash", gitHash).Println("Hello, world")
 
-		errCh := make(chan error, 1)
+		lis, err := net.Listen("tcp", net.JoinHostPort("", strconv.Itoa(*grpcPort)))
+		if err != nil {
+			log.Fatalln("init gRPC server:", err)
+		}
+		defer lis.Close()
+
+		gSrv := initialiseGRPCServer(&server{})
+
+		errCh := make(chan error, 2)
 
 		go func() {
 			http.Handle("/__/", newOpHandler())
 			if err := http.ListenAndServe(net.JoinHostPort("", strconv.Itoa(*srvPort)), nil); err != nil {
 				errCh <- errors.Wrap(err, "server")
+			}
+		}()
+
+		go func() {
+			if err := gSrv.Serve(lis); err != nil {
+				errCh <- errors.Wrap(err, "gRPC server")
 			}
 		}()
 
@@ -71,4 +93,11 @@ func newOpHandler() http.Handler {
 		}).
 		ReadyUseHealthCheck().
 		WithInstrumentedChecks())
+}
+
+func initialiseGRPCServer(srv service.TodoAPIServer) *grpc.Server {
+	gSrv := grpc.NewServer()
+
+	service.RegisterTodoAPIServer(gSrv, srv)
+	return gSrv
 }
