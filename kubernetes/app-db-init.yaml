@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: qiita-advent-calendar-2019
+  namespace: qiita
+  labels:
+    app: qiita-advent-calendar-2019-db-init
+spec:
+  template:
+    spec:
+      containers:
+      - name: db-init
+        image: cockroachdb/cockroach:v2.1.4
+        imagePullPolicy: IfNotPresent
+        command:
+        - "/bin/bash"
+        - "/opt/scripts/user-schema-bootstrap.sh"
+        env:
+        - name: COCKROACH_HOST
+          value: "cockroachdb-proxy"
+        - name: COCKROACH_PORT
+          value: "26257"
+        - name: DB_NAME
+          value: "qiita_advent_calendar_2019_db"
+        - name: DB_USER
+          value: "qiita_advent_calendar_2019"
+        volumeMounts:
+        - name: cockroachdb-scripts
+          mountPath: /opt/scripts
+          readOnly: true
+      restartPolicy: OnFailure
+      volumes:
+      - name: cockroachdb-scripts
+        configMap:
+          name: cockroachdb-scripts
