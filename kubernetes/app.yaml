@@ -35,6 +35,8 @@ spec:
         env:
         - name: SRV_PORT
           value: "8080"
+        - name: DB_URL
+          value: "postgres://qiita_advent_calendar_2019@cockroachdb-proxy:26257/qiita_advent_calendar_2019_db?sslmode=disable"
         ports:
         - containerPort: 8080
           name: srv

@@ -15,6 +15,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/utilitywarehouse/go-operational/op"
 	"google.golang.org/grpc"
+
+	_ "github.com/lib/pq"
 )
 
 var gitHash = "overriden at compile time"
@@ -40,8 +42,21 @@ func main() {
 		Value:  8090,
 	})
 
+	dbURL := app.String(cli.StringOpt{
+		Name:   "db-url",
+		Desc:   "cockroachdb url",
+		EnvVar: "DB_URL",
+		Value:  "postgresql://root@localhost:26257/test?sslmode=disable",
+	})
+
 	app.Action = func() {
 		log.WithField("git_hash", gitHash).Println("Hello, world")
+
+		db, err := initDB(*dbURL)
+		if err != nil {
+			log.WithError(err).Fatalln("connect db")
+		}
+		defer db.Close()
 
 		lis, err := net.Listen("tcp", net.JoinHostPort("", strconv.Itoa(*grpcPort)))
 		if err != nil {

@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/gogo/protobuf v1.1.1
 	github.com/jawher/mow.cli v1.1.0
+	github.com/lib/pq v1.2.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1 // indirect
 	github.com/sirupsen/logrus v1.4.2
