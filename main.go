@@ -19,7 +19,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var gitHash = "overriden at compile time"
+var (
+	gitHash              = "overriden at compile time"
+	defaultSchemaVersion = 0
+)
 
 const (
 	appName = "qiita-advent-calendar-2019"
@@ -48,6 +51,12 @@ func main() {
 		EnvVar: "DB_URL",
 		Value:  "postgresql://root@localhost:26257/test?sslmode=disable",
 	})
+	schemaVersion := app.Int(cli.IntOpt{
+		Name:   "schema-version",
+		Desc:   "schema version",
+		EnvVar: "SCHEMA_VERSION",
+		Value:  defaultSchemaVersion,
+	})
 
 	app.Action = func() {
 		log.WithField("git_hash", gitHash).Println("Hello, world")
@@ -57,6 +66,11 @@ func main() {
 			log.WithError(err).Fatalln("connect db")
 		}
 		defer db.Close()
+
+		_, err = newStore(db, *schemaVersion)
+		if err != nil {
+			log.WithError(err).Fatalln("init store")
+		}
 
 		lis, err := net.Listen("tcp", net.JoinHostPort("", strconv.Itoa(*grpcPort)))
 		if err != nil {
