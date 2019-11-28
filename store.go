@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/schema"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
@@ -34,5 +35,13 @@ func newStore(db *sql.DB, version int) (*store, error) {
 }
 
 func (s *store) projectTodo(t todo) (string, error) {
-	return "", nil
+	id := uuid.New().String()
+	if _, err := s.db.Exec(
+		`INSERT INTO todo (id, title, description) VALUES ($1, $2, $3)`,
+		id, t.title, t.description,
+	); err != nil {
+		return "", err
+	}
+
+	return id, nil
 }

@@ -45,7 +45,7 @@ func TestStore_ProjectTodo(t *testing.T) {
 
 		var got todo
 		require.NoError(t, db.QueryRow(
-			`SELECT id, title, description FROM todo WHERE id = $1`,
+			`SELECT title, description FROM todo WHERE id = $1`,
 			id,
 		).Scan(&got.title, &got.description))
 		assert.Equal(t, input, got)
