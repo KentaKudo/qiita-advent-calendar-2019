@@ -9,7 +9,10 @@ import (
 var _ service.TodoAPIServer = (*server)(nil)
 
 type (
-	todo        struct{}
+	todo struct {
+		title       string
+		description string
+	}
 	todoManager interface {
 		projectTodo(todo) (string, error)
 	}
@@ -19,7 +22,7 @@ type (
 	}
 )
 
-func (*server) GetTodo(context.Context, *service.GetTodoRequest) (*service.GetTodoResponse, error) {
+func (s *server) GetTodo(context.Context, *service.GetTodoRequest) (*service.GetTodoResponse, error) {
 	return &service.GetTodoResponse{
 		Todo: &service.Todo{
 			Title:       "clean your desk!",
@@ -28,7 +31,7 @@ func (*server) GetTodo(context.Context, *service.GetTodoRequest) (*service.GetTo
 	}, nil
 }
 
-func (*server) CreateTodo(context.Context, *service.CreateTodoRequest) (*service.CreateTodoResponse, error) {
+func (s *server) CreateTodo(context.Context, *service.CreateTodoRequest) (*service.CreateTodoResponse, error) {
 	return &service.CreateTodoResponse{}, nil
 }
 
