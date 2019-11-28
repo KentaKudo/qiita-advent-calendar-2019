@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,5 +28,26 @@ func closeDB(t *testing.T, db *sql.DB) {
 }
 
 func TestStore_ProjectTodo(t *testing.T) {
-	t.Run("project a new todo", func(t *testing.T) {})
+	t.Run("project a new todo", func(t *testing.T) {
+		db := openDB(t)
+		defer closeDB(t, db)
+
+		sut, err := newStore(db, defaultSchemaVersion)
+		require.NoError(t, err)
+
+		input := todo{
+			title:       "foo title",
+			description: "foo description",
+		}
+
+		id, err := sut.projectTodo(input)
+		require.NoError(t, err)
+
+		var got todo
+		require.NoError(t, db.QueryRow(
+			`SELECT id, title, description FROM todo WHERE id = $1`,
+			id,
+		).Scan(&got.title, &got.description))
+		assert.Equal(t, input, got)
+	})
 }

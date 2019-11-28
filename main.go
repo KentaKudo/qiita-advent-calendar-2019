@@ -21,7 +21,7 @@ import (
 
 var (
 	gitHash              = "overriden at compile time"
-	defaultSchemaVersion = 0
+	defaultSchemaVersion = 1
 )
 
 const (
