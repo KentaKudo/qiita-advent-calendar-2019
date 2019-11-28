@@ -4,6 +4,8 @@ jobs:
     working_directory: ~/qiita-advent-calendar-2019
     docker:
     - image: circleci/golang:1
+    - image: cockroachdb/cockroach
+      command: ["start", "--insecure"]
     steps:
     - checkout
     - run: make all
@@ -12,6 +14,8 @@ jobs:
     working_directory: ~/qiita-advent-calendar-2019
     docker:
     - image: circleci/golang:1
+    - image: cockroachdb/cockroach
+      command: ["start", "--insecure"]
     steps:
     - checkout
     - run: make all
