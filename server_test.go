@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/service"
@@ -55,5 +56,24 @@ func TestServer_CreateTodo(t *testing.T) {
 		got, err := s.sut.CreateTodo(context.Background(), input)
 		require.NoError(t, err)
 		assert.Equal(t, want, got)
+	})
+
+	t.Run("error in projection", func(t *testing.T) {
+		s := newServerTestSuite(t)
+		defer s.ctrl.Finish()
+
+		input := &service.CreateTodoRequest{
+			Todo: &service.Todo{
+				Title:       "foo todo",
+				Description: "foo description",
+			},
+		}
+
+		s.todoMgr.EXPECT().
+			projectTodo(gomock.Any()).
+			Return("", errors.New("foo error"))
+
+		_, err := s.sut.CreateTodo(context.Background(), input)
+		require.Error(t, err)
 	})
 }
