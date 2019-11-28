@@ -19,6 +19,8 @@ func initDB(connString string) (*sql.DB, error) {
 	return db, nil
 }
 
+var _ todoManager = (*store)(nil)
+
 type store struct {
 	db *sql.DB
 }
@@ -29,4 +31,8 @@ func newStore(db *sql.DB, version int) (*store, error) {
 	}
 
 	return &store{db: db}, nil
+}
+
+func (s *store) projectTodo(t todo) (string, error) {
+	return "", nil
 }
