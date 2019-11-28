@@ -17,6 +17,14 @@ protos:
 		service.proto
 
 
+mockgen-install:
+	GO111MODULE=off go get github.com/golang/mock/gomock
+	go install github.com/golang/mock/mockgen
+
+mockgen:
+	mockgen -source=server.go -package=main -destination server_mock.go -mock_names todoManager=MockTodoManager
+
+
 .PHONY: install
 install:
 	go get -v ./...
