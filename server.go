@@ -31,8 +31,19 @@ func (s *server) GetTodo(context.Context, *service.GetTodoRequest) (*service.Get
 	}, nil
 }
 
-func (s *server) CreateTodo(context.Context, *service.CreateTodoRequest) (*service.CreateTodoResponse, error) {
-	return &service.CreateTodoResponse{}, nil
+func (s *server) CreateTodo(ctx context.Context, req *service.CreateTodoRequest) (*service.CreateTodoResponse, error) {
+	id, err := s.todoMgr.projectTodo(todo{
+		title:       req.Todo.Title,
+		description: req.Todo.Description,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &service.CreateTodoResponse{
+		Success: true,
+		Id:      id,
+	}, nil
 }
 
 func (*server) ListTodos(context.Context, *service.ListTodosRequest) (*service.ListTodosResponse, error) {
