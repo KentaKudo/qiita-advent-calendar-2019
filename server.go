@@ -8,7 +8,16 @@ import (
 
 var _ service.TodoAPIServer = (*server)(nil)
 
-type server struct{}
+type (
+	todo        struct{}
+	todoManager interface {
+		projectTodo(todo) (string, error)
+	}
+
+	server struct {
+		todoMgr todoManager
+	}
+)
 
 func (*server) GetTodo(context.Context, *service.GetTodoRequest) (*service.GetTodoResponse, error) {
 	return &service.GetTodoResponse{
