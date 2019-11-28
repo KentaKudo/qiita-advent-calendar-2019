@@ -22,7 +22,7 @@ func newServerTestSuite(t *testing.T) serverTestSuite {
 	ctrl := gomock.NewController(t)
 	todoMgr := NewMockTodoManager(ctrl)
 	return serverTestSuite{
-		sut:     &server{todoMgr: todoMgr},
+		sut:     newServer(todoMgr),
 		ctrl:    ctrl,
 		todoMgr: todoMgr,
 	}

@@ -22,6 +22,12 @@ type (
 	}
 )
 
+func newServer(todoMgr todoManager) *server {
+	return &server{
+		todoMgr: todoMgr,
+	}
+}
+
 func (s *server) GetTodo(context.Context, *service.GetTodoRequest) (*service.GetTodoResponse, error) {
 	return &service.GetTodoResponse{
 		Todo: &service.Todo{

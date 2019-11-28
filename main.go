@@ -67,7 +67,7 @@ func main() {
 		}
 		defer db.Close()
 
-		_, err = newStore(db, *schemaVersion)
+		store, err := newStore(db, *schemaVersion)
 		if err != nil {
 			log.WithError(err).Fatalln("init store")
 		}
@@ -78,7 +78,7 @@ func main() {
 		}
 		defer lis.Close()
 
-		gSrv := initialiseGRPCServer(&server{})
+		gSrv := initialiseGRPCServer(newServer(store))
 
 		errCh := make(chan error, 2)
 
