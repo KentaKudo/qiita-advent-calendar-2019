@@ -8,8 +8,11 @@ import (
 	fmt "fmt"
 	proto "github.com/gogo/protobuf/proto"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
+	math_bits "math/bits"
 	reflect "reflect"
 	strings "strings"
 )
@@ -693,6 +696,20 @@ type TodoAPIServer interface {
 	ListTodos(context.Context, *ListTodosRequest) (*ListTodosResponse, error)
 }
 
+// UnimplementedTodoAPIServer can be embedded to have forward compatible implementations.
+type UnimplementedTodoAPIServer struct {
+}
+
+func (*UnimplementedTodoAPIServer) GetTodo(ctx context.Context, req *GetTodoRequest) (*GetTodoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTodo not implemented")
+}
+func (*UnimplementedTodoAPIServer) CreateTodo(ctx context.Context, req *CreateTodoRequest) (*CreateTodoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTodo not implemented")
+}
+func (*UnimplementedTodoAPIServer) ListTodos(ctx context.Context, req *ListTodosRequest) (*ListTodosResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTodos not implemented")
+}
+
 func RegisterTodoAPIServer(s *grpc.Server, srv TodoAPIServer) {
 	s.RegisterService(&_TodoAPI_serviceDesc, srv)
 }
@@ -1070,14 +1087,7 @@ func (m *Todo) Size() (n int) {
 }
 
 func sovService(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
+	return (math_bits.Len64(x|1) + 6) / 7
 }
 func sozService(x uint64) (n int) {
 	return sovService(uint64((x << 1) ^ uint64((int64(x) >> 63))))
