@@ -61,7 +61,7 @@ spec:
         command:
         - sh
         - -ecx
-        - export JMX_PORT=9090 && exec ./kafka-server-start.sh ../config/server.properties --override broker.id=$(hostname | aws -F'-' '{print $2}')
+        - export JMX_PORT=9090 && exec ./kafka-server-start.sh ../config/server.properties --override broker.id=$(hostname | awk -F'-' '{print $2}')
         env:
         - name: KAFKA_HEAP_OPTS
           value: -Xmx2G -Xms2G
