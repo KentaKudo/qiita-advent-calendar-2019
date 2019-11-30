@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "2379"
+    prometheus.io/scrape: "true"
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+  labels:
+    role: etcd
+  name: kafka-etcd
+  namespace: qiita
+spec:
+  clusterIP: None
+  ports:
+  - name: client
+    port: 2379
+    protocol: TCP
+    targetPort: 2379
+  - name: peer
+    port: 2380
+    protocol: TCP
+    targetPort: 2380
+  selector:
+    app: kafka-etcd
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: kafka-etcd
+  namespace: qiita
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kafka-etcd
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: kafka-etcd
+    role: etcd
+  name: kafka-etcd
+  namespace: qiita
+spec:
+  podManagementPolicy: Parallel
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kafka-etcd
+  serviceName: kafka-etcd
+  template:
+    metadata:
+      labels:
+        app: kafka-etcd
+      name: kafka-etcd
+    spec:
+      containers:
+      - name: etcd
+        image: quay.io/coreos/etcd:v3.2.9
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ecx
+        - |
+          PEERS=""
+          for i in $(seq 0 $((${CLUSTER_SIZE} - 1))); do
+              PEERS="${PEERS}${PEERS:+,}${SET_NAME}-${i}=http://${SET_NAME}-${i}.${SET_NAME}:2380"
+          done
+          # start etcd. If cluster is already initialized the `--initial-*` options will be ignored.
+          exec etcd --name ${HOSTNAME} \
+            --listen-peer-urls http://0.0.0.0:2380 \
+            --listen-client-urls http://0.0.0.0:2379 \
+            --advertise-client-urls http://${HOSTNAME}.${SET_NAME}:2379 \
+            --initial-advertise-peer-urls http://${HOSTNAME}.${SET_NAME}:2380 \
+            --initial-cluster-token qiita-${SET_NAME} \
+            --initial-cluster ${PEERS} \
+            --initial-cluster-state new \
+            --data-dir /var/run/etcd/default.etcd
+        env:
+        - name: CLUSTER_SIZE
+          value: "3"
+        - name: SET_NAME
+          value: kafka-etcd
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 2379
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 10
+        ports:
+        - containerPort: 2379
+          name: client
+          protocol: TCP
+        - containerPort: 2380
+          name: peer
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /var/run/etcd
+          name: kafka-etcd-data
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      name: kafka-etcd-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+---
