@@ -1,0 +1,246 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: qiita
+spec:
+  ports:
+  - port: 9092
+    protocol: TCP
+    targetPort: 9092
+  selector:
+    app: kafka
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: kafka
+  namespace: qiita
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kafka
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: kafka
+  name: kafka
+  namespace: qiita
+spec:
+  podManagementPolicy: Parallel
+  replicas: 3
+  selector:
+    matchLabels:
+      app: kafka
+  serviceName: broker
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      terminationGracePeriodSeconds: 300
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - kafka
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      containers:
+      - name: broker
+        image: quay.io/utilitywarehouse/uw-kafka:v2.0.1
+        imagePullPolicy: Always
+        command:
+        - sh
+        - -ecx
+        - export JMX_PORT=9090 && exec ./kafka-server-start.sh ../config/server.properties --override broker.id=$(hostname | aws -F'-' '{print $2}')
+        env:
+        - name: KAFKA_HEAP_OPTS
+          value: -Xmx2G -Xms2G
+        ports:
+        - containerPort: 9092
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /opt/kafka/data
+          name: datadir
+        - mountPath: /opt/kafka/config
+          name: kafka-configmap
+        readinessProbe:
+          failureThreshold: 10
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 15
+          exec:
+            command:
+            - sh
+            - -c
+            - "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server=localhost:9092"
+        livenessProbe:
+          failureThreshold: 10
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 15
+          exec:
+            command:
+            - sh
+            - -c
+            - "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server=localhost:9092"
+      - name: jmx-exporter
+        image: quay.io/utilitywarehouse/jmx_exporter:0.11.0
+        imagePullPolicy: Always
+        env:
+        - name: PORT
+          value: "8080"
+        ports:
+        - containerPort: 8080
+          name: web
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /app/config
+          name: jmx-exporter-configmap
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: kafka-configmap
+        name: kafka-configmap
+      - configMap:
+          defaultMode: 420
+          name: jmx-exporter-configmap
+        name: jmx-exporter-configmap
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 500Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-configmap
+  namespace: qiita
+data:
+  server.properties: |-
+    # https://kafka.apache.org/documentation/#brokerconfigs
+    auto.create.topics.enable=false
+    broker.id=0
+    connections.max.idle.ms=10800000
+    delete.topic.enable=true
+    inter.broker.protocol.version=2.0
+    # always keep latest offset of a message
+    log.cleanup.policy=compact
+    # disable log cleaner
+    log.cleaner.enable=false
+    # 1 hour
+    # log.cleaner.delete.retention.ms=3600000
+    #
+    # following configs apply to 'delete' cleanup.policy
+    # log.retention.hours=1440
+    # 3.5GiB this is per partition
+    # log.retention.bytes=3758096384
+    # 500MiB
+    # log.retention.check.interval.ms=300000
+    log.dirs=/opt/kafka/data/logs
+    log.segment.bytes=524288000
+    log.flush.offset.checkpoint.interval.ms=10000
+    log.message.format.version=2.0
+    num.network.threads=3
+    num.io.threads=8
+    num.partitions=15
+    num.recovery.threads.per.data.dir=8
+    offsets.retention.minutes=86400
+    socket.send.buffer.bytes=102400
+    socket.receive.buffer.bytes=102400
+    socket.request.max.bytes=104857600
+    unclean.leader.election.enable=false
+    zookeeper.connect=zetcd:2181/kafka
+    zookeeper.connection.timeout.ms=30000
+
+    # Replication configurations
+    num.replica.fetchers=2
+    replica.fetch.max.bytes=1048576
+    replica.fetch.wait.max.ms=500
+    replica.high.watermark.checkpoint.interval.ms=5000
+    replica.socket.timeout.ms=30000
+    replica.socket.receive.buffer.bytes=65536
+    replica.lag.time.max.ms=10000
+    replica.lag.max.messages=4000
+    min.insync.replicas=1
+
+  log4j.properties: |-
+    log4j.rootLogger=INFO, stdout
+
+    log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+    log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+    log4j.appender.stdout.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+    log4j.appender.kafkaAppender=org.apache.log4j.ConsoleAppender
+    log4j.appender.kafkaAppender.layout=org.apache.log4j.PatternLayout
+    log4j.appender.kafkaAppender.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+    log4j.appender.stateChangeAppender=org.apache.log4j.ConsoleAppender
+    log4j.appender.stateChangeAppender.layout=org.apache.log4j.PatternLayout
+    log4j.appender.stateChangeAppender.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+    log4j.appender.requestAppender=org.apache.log4j.ConsoleAppender
+    log4j.appender.requestAppender.layout=org.apache.log4j.PatternLayout
+    log4j.appender.requestAppender.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+    log4j.appender.cleanerAppender=org.apache.log4j.ConsoleAppender
+    log4j.appender.cleanerAppender.layout=org.apache.log4j.PatternLayout
+    log4j.appender.cleanerAppender.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+    log4j.appender.controllerAppender=org.apache.log4j.ConsoleAppender
+    log4j.appender.controllerAppender.layout=org.apache.log4j.PatternLayout
+    log4j.appender.controllerAppender.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+    log4j.appender.authorizerAppender=org.apache.log4j.ConsoleAppender
+    log4j.appender.authorizerAppender.layout=org.apache.log4j.PatternLayout
+    log4j.appender.authorizerAppender.layout.ConversionPattern=[%d] %p %m (%c)%n
+
+    log4j.logger.kafka=INFO, kafkaAppender
+    log4j.logger.kafka.network.RequestChannel$=WARN, requestAppender
+    log4j.additivity.kafka.network.RequestChannel$=false
+    log4j.logger.kafka.request.logger=WARN, requestAppender
+    log4j.additivity.kafka.request.logger=false
+    log4j.logger.kafka.controller=INFO, controllerAppender
+    log4j.additivity.kafka.controller=false
+    log4j.logger.kafka.log.LogCleaner=INFO, cleanerAppender
+    log4j.additivity.kafka.log.LogCleaner=false
+    log4j.logger.state.change.logger=WARN, stateChangeAppender
+    log4j.additivity.state.change.logger=false
+    log4j.logger.kafka.authorizer.logger=WARN, authorizerAppender
+    log4j.additivity.kafka.authorizer.logger=false
+
+  tools-log4j.properties: |-
+    log4j.rootLogger=WARN, stderr
+    log4j.appender.stderr=org.apache.log4j.ConsoleAppender
+    log4j.appender.stderr.layout=org.apache.log4j.PatternLayout
+    log4j.appender.stderr.layout.ConversionPattern=[%d] %p %m (%c)%n
+    log4j.appender.stderr.Target=System.err
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jmx-exporter-configmap
+  namespace: qiita
+data:
+  config.yml: |-
+    ---
+    hostPort: localhost:9090
+    rules:
+    - pattern: ".*"
+---
