@@ -1,6 +1,25 @@
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "5555"
+    prometheus.io/scrape: "true"
+  name: broker
+  namespace: qiita
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - port: 9092
+      protocol: TCP
+      targetPort: 9092
+  selector:
+    app: kafka
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: kafka
   namespace: qiita
 spec:
@@ -125,7 +144,7 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 500Gi
+          storage: 1Gi
 ---
 apiVersion: v1
 kind: ConfigMap
