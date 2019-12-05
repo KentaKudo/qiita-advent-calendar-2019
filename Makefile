@@ -6,17 +6,23 @@ LINKFLAGS := -X main.gitHash=$(GIT_HASH)
 PROTO_DIR := ./proto
 GENERATED_DIR := ./internal/pb
 GENERATED_SERVICE_DIR := $(GENERATED_DIR)/service
+GENERATED_EVENT_DIR := $(GENERATED_DIR)/event
 GENERATED_ENVELOPE_DIR := $(GENERATED_DIR)/envelope
 ENVELOPE_PROTO_MAPPINGS := Mgoogle/protobuf/timestamp.proto=github.com/gogo/protobuf/types,Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types
 
 .PHONY: protos
 protos:
-	mkdir -pv $(GENERATED_DIR) $(GENERATED_SERVICE_DIR) $(GENERATED_ENVELOPE_DIR)
+	mkdir -pv $(GENERATED_DIR) $(GENERATED_SERVICE_DIR) $(GENERATED_EVENT_DIR) $(GENERATED_ENVELOPE_DIR)
 	protoc \
 		-I $(PROTO_DIR) \
 		-I $(GOPATH)/src:$(GOPATH)/src/github.com/gogo/protobuf/protobuf \
 		--gogoslick_out=plugins=grpc:$(GENERATED_SERVICE_DIR) \
 		service.proto
+	protoc \
+		-I $(PROTO_DIR) \
+		-I $(GOPATH)/src:$(GOPATH)/src/github.com/gogo/protobuf/protobuf \
+		--gogoslick_out=paths=source_relative:$(GENERATED_EVENT_DIR) \
+		event.proto
 	protoc \
 	  	-I $(PROTO_DIR) \
 		-I $(GOPATH)/src:$(GOPATH)/src/github.com/gogo/protobuf/protobuf \

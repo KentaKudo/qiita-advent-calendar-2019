@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package event;
+
+message CreateTodoActionEvent {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+}
