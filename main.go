@@ -10,7 +10,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/envelope"
+	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/event"
 	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/service"
+	"github.com/gogo/protobuf/proto"
+	"github.com/gogo/protobuf/types"
 	cli "github.com/jawher/mow.cli"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -178,4 +182,22 @@ func initialiseKafkaSink(version, brokers, topic *string, keyFunc func(substrate
 	}
 
 	return substrate.NewSynchronousMessageSink(sink), nil
+}
+
+func actionKeyFunc(msg substrate.Message) []byte {
+	var env envelope.Event
+	if err := proto.Unmarshal(msg.Data(), &env); err != nil {
+		panic(err)
+	}
+
+	if types.Is(env.Payload, &event.CreateTodoActionEvent{}) {
+		var ev event.CreateTodoActionEvent
+		if err := types.UnmarshalAny(env.Payload, &ev); err != nil {
+			panic(err)
+		}
+
+		return []byte(ev.Id)
+	}
+
+	panic("unknown event")
 }
