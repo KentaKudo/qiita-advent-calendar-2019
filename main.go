@@ -104,8 +104,6 @@ func main() {
 		}
 		defer lis.Close()
 
-		gSrv := initialiseGRPCServer(newServer(nil))
-
 		actionSink, err := initialiseKafkaSink(sinkKafkaVersion, sinkBrokers, actionTopic, actionKeyFunc)
 		if err != nil {
 			log.Fatalln("init payment account kafka sink:", err)
@@ -122,6 +120,9 @@ func main() {
 		}()
 
 		var wg sync.WaitGroup
+
+		gSrv := initialiseGRPCServer(newServer(actionSink))
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
