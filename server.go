@@ -3,7 +3,13 @@ package main
 import (
 	"context"
 
+	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/envelope"
+	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/event"
 	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/service"
+	"github.com/gogo/protobuf/types"
+	"github.com/golang/protobuf/proto"
+	"github.com/google/uuid"
+	"github.com/uw-labs/substrate"
 )
 
 var _ service.TodoAPIServer = (*server)(nil)
@@ -18,13 +24,15 @@ type (
 	}
 
 	server struct {
-		todoMgr todoManager
+		sink substrate.SynchronousMessageSink
 	}
 )
 
-func newServer(todoMgr todoManager) *server {
+func newServer(
+	sink substrate.SynchronousMessageSink,
+) *server {
 	return &server{
-		todoMgr: todoMgr,
+		sink: sink,
 	}
 }
 
@@ -38,17 +46,36 @@ func (s *server) GetTodo(context.Context, *service.GetTodoRequest) (*service.Get
 }
 
 func (s *server) CreateTodo(ctx context.Context, req *service.CreateTodoRequest) (*service.CreateTodoResponse, error) {
-	id, err := s.todoMgr.projectTodo(todo{
-		title:       req.Todo.Title,
-		description: req.Todo.Description,
-	})
+	todoID := uuid.New().String()
+	ev := &event.CreateTodoActionEvent{
+		Id:          todoID,
+		Title:       req.Todo.Title,
+		Description: req.Todo.Description,
+	}
+
+	any, err := types.MarshalAny(ev)
 	if err != nil {
+		return nil, err
+	}
+
+	env := envelope.Event{
+		Id:        uuid.New().String(),
+		Timestamp: types.TimestampNow(),
+		Payload:   any,
+	}
+
+	b, err := proto.Marshal(&env)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.sink.PublishMessage(ctx, message(b)); err != nil {
 		return nil, err
 	}
 
 	return &service.CreateTodoResponse{
 		Success: true,
-		Id:      id,
+		Id:      todoID,
 	}, nil
 }
 

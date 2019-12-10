@@ -6,6 +6,7 @@ require (
 	github.com/Shopify/sarama v1.24.1
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/mock v1.2.0
+	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/jawher/mow.cli v1.1.0
 	github.com/lib/pq v1.2.0

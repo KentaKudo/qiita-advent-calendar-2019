@@ -2,29 +2,41 @@ package main
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/KentaKudo/qiita-advent-calendar-2019/internal/pb/service"
 	gomock "github.com/golang/mock/gomock"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uw-labs/substrate"
 )
 
+var _ substrate.SynchronousMessageSink = mockMessageSink{}
+
+type mockMessageSink struct{}
+
+func (s mockMessageSink) PublishMessage(_ context.Context, _ substrate.Message) error {
+	return nil
+}
+
+func (s mockMessageSink) Close() error {
+	return nil
+}
+
+func (s mockMessageSink) Status() (*substrate.Status, error) {
+	return &substrate.Status{}, nil
+}
+
 type serverTestSuite struct {
-	sut     *server
-	ctrl    *gomock.Controller
-	todoMgr *MockTodoManager
+	sut  *server
+	ctrl *gomock.Controller
 }
 
 func newServerTestSuite(t *testing.T) serverTestSuite {
 	ctrl := gomock.NewController(t)
-	todoMgr := NewMockTodoManager(ctrl)
 	return serverTestSuite{
-		sut:     newServer(todoMgr),
-		ctrl:    ctrl,
-		todoMgr: todoMgr,
+		sut:  newServer(mockMessageSink{}),
+		ctrl: ctrl,
 	}
 }
 
@@ -40,40 +52,8 @@ func TestServer_CreateTodo(t *testing.T) {
 			},
 		}
 
-		todoID := uuid.New().String()
-		want := &service.CreateTodoResponse{
-			Success: true,
-			Id:      todoID,
-		}
-
-		s.todoMgr.EXPECT().
-			projectTodo(todo{
-				title:       input.Todo.Title,
-				description: input.Todo.Description,
-			}).
-			Return(todoID, nil)
-
 		got, err := s.sut.CreateTodo(context.Background(), input)
 		require.NoError(t, err)
-		assert.Equal(t, want, got)
-	})
-
-	t.Run("error in projection", func(t *testing.T) {
-		s := newServerTestSuite(t)
-		defer s.ctrl.Finish()
-
-		input := &service.CreateTodoRequest{
-			Todo: &service.Todo{
-				Title:       "foo todo",
-				Description: "foo description",
-			},
-		}
-
-		s.todoMgr.EXPECT().
-			projectTodo(gomock.Any()).
-			Return("", errors.New("foo error"))
-
-		_, err := s.sut.CreateTodo(context.Background(), input)
-		require.Error(t, err)
+		assert.NotEmpty(t, got.Id)
 	})
 }

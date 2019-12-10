@@ -93,7 +93,7 @@ func main() {
 		}
 		defer db.Close()
 
-		store, err := newStore(db, *schemaVersion)
+		_, err = newStore(db, *schemaVersion)
 		if err != nil {
 			log.WithError(err).Fatalln("init store")
 		}
@@ -104,7 +104,7 @@ func main() {
 		}
 		defer lis.Close()
 
-		gSrv := initialiseGRPCServer(newServer(store))
+		gSrv := initialiseGRPCServer(newServer(nil))
 
 		actionSink, err := initialiseKafkaSink(sinkKafkaVersion, sinkBrokers, actionTopic, actionKeyFunc)
 		if err != nil {
