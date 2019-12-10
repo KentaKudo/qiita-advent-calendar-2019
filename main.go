@@ -202,10 +202,8 @@ func actionKeyFunc(msg substrate.Message) []byte {
 	panic("unknown event")
 }
 
-type message struct {
-	data []byte
-}
+type message []byte
 
 func (m message) Data() []byte {
-	return m.data
+	return m
 }
