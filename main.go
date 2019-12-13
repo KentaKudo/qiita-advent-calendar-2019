@@ -76,6 +76,29 @@ func main() {
 		EnvVar: "SINK_BROKERS",
 		Value:  "localhost:9092",
 	})
+	sourceKafkaVersion := app.String(cli.StringOpt{
+		Name:   "source-kafka-version",
+		Desc:   "source kafka version",
+		EnvVar: "SOURCE_KAFKA_VERSION",
+	})
+	sourceBrokers := app.String(cli.StringOpt{
+		Name:   "source-brokers",
+		Desc:   "kafka source brokers",
+		EnvVar: "SOURCE_BROKERS",
+		Value:  "localhost:9092",
+	})
+	consumerID := app.String(cli.StringOpt{
+		Name:   "consumer-id",
+		Desc:   "consumer id to connect to source",
+		EnvVar: "CONSUMER_ID",
+		Value:  appName,
+	})
+	kafkaOffsetOldest := app.Bool(cli.BoolOpt{
+		Name:   "kafka-offset-oldest",
+		Desc:   "If set to true, will start consuming from the oldest available messages",
+		EnvVar: "KAFKA_OFFSET_OLDEST",
+		Value:  true,
+	})
 
 	actionTopic := app.String(cli.StringOpt{
 		Name:   "action-topic",
@@ -106,9 +129,15 @@ func main() {
 
 		actionSink, err := initialiseKafkaSink(sinkKafkaVersion, sinkBrokers, actionTopic, actionKeyFunc)
 		if err != nil {
-			log.Fatalln("init payment account kafka sink:", err)
+			log.WithError(err).Fatalln("init action event kafka sink")
 		}
 		defer actionSink.Close()
+
+		actionSource, err := initialiseKafkaSource(sourceKafkaVersion, sourceBrokers, actionTopic, consumerID, kafkaOffsetOldest)
+		if err != nil {
+			log.WithError(err).Fatalln("init action event kafka source")
+		}
+		defer actionSource.Close()
 
 		errCh := make(chan error, 2)
 
@@ -183,6 +212,28 @@ func initialiseKafkaSink(version, brokers, topic *string, keyFunc func(substrate
 	}
 
 	return substrate.NewSynchronousMessageSink(sink), nil
+}
+
+func initialiseKafkaSource(version, brokers, topic, consumer *string, offsetOldest *bool) (substrate.SynchronousMessageSource, error) {
+	var kafkaOffset int64
+	if *offsetOldest {
+		kafkaOffset = kafka.OffsetOldest
+	} else {
+		kafkaOffset = kafka.OffsetNewest
+	}
+
+	source, err := kafka.NewAsyncMessageSource(kafka.AsyncMessageSourceConfig{
+		ConsumerGroup: *consumer,
+		Topic:         *topic,
+		Brokers:       strings.Split(*brokers, ","),
+		Offset:        kafkaOffset,
+		Version:       *version,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return substrate.NewSynchronousMessageSource(source), nil
 }
 
 func actionKeyFunc(msg substrate.Message) []byte {
