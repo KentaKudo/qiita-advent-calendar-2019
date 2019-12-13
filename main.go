@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"os"
@@ -116,7 +117,7 @@ func main() {
 		}
 		defer db.Close()
 
-		_, err = newStore(db, *schemaVersion)
+		store, err := newStore(db, *schemaVersion)
 		if err != nil {
 			log.WithError(err).Fatalln("init store")
 		}
@@ -139,7 +140,9 @@ func main() {
 		}
 		defer actionSource.Close()
 
-		errCh := make(chan error, 2)
+		var wg sync.WaitGroup
+		ctx, cancel := context.WithCancel(context.Background())
+		errCh := make(chan error, 3)
 
 		go func() {
 			http.Handle("/__/", newOpHandler())
@@ -147,8 +150,6 @@ func main() {
 				errCh <- errors.Wrap(err, "server")
 			}
 		}()
-
-		var wg sync.WaitGroup
 
 		gSrv := initialiseGRPCServer(newServer(actionSink))
 
@@ -158,6 +159,16 @@ func main() {
 
 			if err := gSrv.Serve(lis); err != nil {
 				errCh <- errors.Wrap(err, "gRPC server")
+			}
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			h := newActionEventHandler(store)
+			if err := actionSource.ConsumeMessages(ctx, h.handle); err != nil {
+				errCh <- errors.Wrap(err, "failed to consume action event")
 			}
 		}()
 
@@ -171,6 +182,7 @@ func main() {
 			log.Println("termination signal received. attempt graceful shutdown")
 		}
 		gSrv.GracefulStop()
+		cancel()
 		wg.Wait()
 
 		log.Println("bye")
