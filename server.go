@@ -16,11 +16,12 @@ var _ service.TodoAPIServer = (*server)(nil)
 
 type (
 	todo struct {
+		id          string
 		title       string
 		description string
 	}
 	todoManager interface {
-		projectTodo(todo) (string, error)
+		projectTodo(todo) error
 	}
 
 	server struct {

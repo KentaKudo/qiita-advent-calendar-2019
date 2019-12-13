@@ -36,18 +36,18 @@ func TestStore_ProjectTodo(t *testing.T) {
 		require.NoError(t, err)
 
 		input := todo{
+			id:          uuid.New().String(),
 			title:       "foo title",
 			description: "foo description",
 		}
 
-		id, err := sut.projectTodo(input)
-		require.NoError(t, err)
+		require.NoError(t, sut.projectTodo(input))
 
 		var got todo
 		require.NoError(t, db.QueryRow(
-			`SELECT title, description FROM todo WHERE id = $1`,
-			id,
-		).Scan(&got.title, &got.description))
+			`SELECT id, title, description FROM todo WHERE id = $1`,
+			input.id,
+		).Scan(&got.id, &got.title, &got.description))
 		assert.Equal(t, input, got)
 	})
 }
