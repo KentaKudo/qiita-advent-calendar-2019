@@ -69,7 +69,7 @@ func (s *server) CreateTodo(ctx context.Context, req *service.CreateTodoRequest)
 		return nil, err
 	}
 
-	if err := s.sink.PublishMessage(ctx, message(b)); err != nil {
+	if err := s.sink.PublishMessage(ctx, &message{b}); err != nil {
 		return nil, err
 	}
 
