@@ -10,6 +10,9 @@ spec:
   - name: srv
     protocol: TCP
     port: 8080
+  - name: app
+    protocol: TCP
+    port: 8090
   selector:
     app: *app
 ---
@@ -35,8 +38,34 @@ spec:
         env:
         - name: SRV_PORT
           value: "8080"
+        - name: GRPC_PORT
+          value: "8090"
         - name: DB_URL
           value: "postgres://qiita_advent_calendar_2019@cockroachdb-proxy:26257/qiita_advent_calendar_2019_db?sslmode=disable"
+        - name: SOURCE_KAFKA_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-brokers
+              key: internal.kafka.broker.version
+        - name: SOURCE_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-brokers
+              key: internal.kafka.brokers
+        - name: SINK_KAFKA_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-brokers
+              key: internal.kafka.broker.version
+        - name: SINK_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-brokers
+              key: internal.kafka.brokers
+        - name: ACTION_TOPIC
+          value: "qiita.action"
         ports:
-        - containerPort: 8080
-          name: srv
+        - name: srv
+          containerPort: 8080
+        - name: app
+          containerPort: 8090

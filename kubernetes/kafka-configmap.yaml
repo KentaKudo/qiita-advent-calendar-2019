@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-brokers
+  namespace: qiita
+data:
+  internal.kafka.brokers: kafka-0.broker:9092,kafka-1.broker:9092,kafka-2.broker:9092
+  internal.kafka.broker.version: 2.0.1

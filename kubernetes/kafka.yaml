@@ -125,8 +125,8 @@ spec:
           name: web
           protocol: TCP
         volumeMounts:
-        - mountPath: /app/config
-          name: jmx-exporter-configmap
+        - name: jmx-exporter-configmap
+          mountPath: /app/config
       volumes:
       - configMap:
           defaultMode: 420
@@ -144,7 +144,7 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 1Gi
+          storage: 10Gi
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -173,7 +173,7 @@ data:
     # 500MiB
     # log.retention.check.interval.ms=300000
     log.dirs=/opt/kafka/data/logs
-    log.segment.bytes=524288000
+    log.segment.bytes=52428800
     log.flush.offset.checkpoint.interval.ms=10000
     log.message.format.version=2.0
     num.network.threads=3
