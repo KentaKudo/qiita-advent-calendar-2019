@@ -22,6 +22,7 @@ import (
 	"github.com/utilitywarehouse/go-operational/op"
 	"github.com/uw-labs/substrate"
 	"github.com/uw-labs/substrate/kafka"
+	"github.com/uw-labs/substrate/proximo"
 	"google.golang.org/grpc"
 
 	_ "github.com/lib/pq"
@@ -77,27 +78,22 @@ func main() {
 		EnvVar: "SINK_BROKERS",
 		Value:  "localhost:9092",
 	})
-	sourceKafkaVersion := app.String(cli.StringOpt{
-		Name:   "source-kafka-version",
-		Desc:   "source kafka version",
-		EnvVar: "SOURCE_KAFKA_VERSION",
-	})
-	sourceBrokers := app.String(cli.StringOpt{
-		Name:   "source-brokers",
-		Desc:   "kafka source brokers",
-		EnvVar: "SOURCE_BROKERS",
-		Value:  "localhost:9092",
-	})
 	consumerID := app.String(cli.StringOpt{
 		Name:   "consumer-id",
 		Desc:   "consumer id to connect to source",
 		EnvVar: "CONSUMER_ID",
 		Value:  appName,
 	})
-	kafkaOffsetOldest := app.Bool(cli.BoolOpt{
-		Name:   "kafka-offset-oldest",
+	proximoAddr := app.String(cli.StringOpt{
+		Desc:   "proximo endpoint",
+		Name:   "proximo-addr",
+		EnvVar: "PROXIMO_ADDR",
+		Value:  "proximo:6868",
+	})
+	proximoOffsetOldest := app.Bool(cli.BoolOpt{
+		Name:   "proximo-offset-oldest",
 		Desc:   "If set to true, will start consuming from the oldest available messages",
-		EnvVar: "KAFKA_OFFSET_OLDEST",
+		EnvVar: "PROXIMO_OFFSET_OLDEST",
 		Value:  true,
 	})
 
@@ -134,7 +130,7 @@ func main() {
 		}
 		defer actionSink.Close()
 
-		actionSource, err := initialiseKafkaSource(sourceKafkaVersion, sourceBrokers, actionTopic, consumerID, kafkaOffsetOldest)
+		actionSource, err := initialiseProximoSource(proximoAddr, consumerID, actionTopic, proximoOffsetOldest)
 		if err != nil {
 			log.WithError(err).Fatalln("init action event kafka source")
 		}
@@ -226,28 +222,6 @@ func initialiseKafkaSink(version, brokers, topic *string, keyFunc func(substrate
 	return substrate.NewSynchronousMessageSink(sink), nil
 }
 
-func initialiseKafkaSource(version, brokers, topic, consumer *string, offsetOldest *bool) (substrate.SynchronousMessageSource, error) {
-	var kafkaOffset int64
-	if *offsetOldest {
-		kafkaOffset = kafka.OffsetOldest
-	} else {
-		kafkaOffset = kafka.OffsetNewest
-	}
-
-	source, err := kafka.NewAsyncMessageSource(kafka.AsyncMessageSourceConfig{
-		ConsumerGroup: *consumer,
-		Topic:         *topic,
-		Brokers:       strings.Split(*brokers, ","),
-		Offset:        kafkaOffset,
-		Version:       *version,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return substrate.NewSynchronousMessageSource(source), nil
-}
-
 func actionKeyFunc(msg substrate.Message) []byte {
 	var env envelope.Event
 	if err := proto.Unmarshal(msg.Data(), &env); err != nil {
@@ -270,4 +244,25 @@ type message struct{ data []byte }
 
 func (m *message) Data() []byte {
 	return m.data
+}
+
+func initialiseProximoSource(addr, consumerID, topic *string, offsetOldest *bool) (substrate.SynchronousMessageSource, error) {
+	var proximoOffset proximo.Offset
+	if *offsetOldest {
+		proximoOffset = proximo.OffsetOldest
+	} else {
+		proximoOffset = proximo.OffsetNewest
+	}
+
+	source, err := proximo.NewAsyncMessageSource(proximo.AsyncMessageSourceConfig{
+		ConsumerGroup: *consumerID,
+		Topic:         *topic,
+		Broker:        *addr,
+		Offset:        proximoOffset,
+		Insecure:      true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return substrate.NewSynchronousMessageSource(source), nil
 }

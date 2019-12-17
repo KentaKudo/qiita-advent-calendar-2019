@@ -42,16 +42,6 @@ spec:
           value: "8090"
         - name: DB_URL
           value: "postgres://qiita_advent_calendar_2019@cockroachdb-proxy:26257/qiita_advent_calendar_2019_db?sslmode=disable"
-        - name: SOURCE_KAFKA_VERSION
-          valueFrom:
-            configMapKeyRef:
-              name: kafka-brokers
-              key: internal.kafka.broker.version
-        - name: SOURCE_BROKERS
-          valueFrom:
-            configMapKeyRef:
-              name: kafka-brokers
-              key: internal.kafka.brokers
         - name: SINK_KAFKA_VERSION
           valueFrom:
             configMapKeyRef:
@@ -62,6 +52,8 @@ spec:
             configMapKeyRef:
               name: kafka-brokers
               key: internal.kafka.brokers
+        - name: PROXIMO_ADDR
+          value: "proximo:6868"
         - name: ACTION_TOPIC
           value: "qiita.action"
         ports:
