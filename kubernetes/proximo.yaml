@@ -1,0 +1,96 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: 'true'
+    prometheus.io/path:   /__/metrics
+    prometheus.io/port:   '8080'
+  name: &app proximo
+  namespace: &ns qiita
+  labels:
+    app: *app
+spec:
+  ports:
+    - name: app
+      port: 6868
+      protocol: TCP
+      targetPort: 6868
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: *app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: &app proximo
+  name: *app
+  namespace: &ns qiita
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: *app
+  template:
+    metadata:
+      labels:
+        app: *app
+      namespace: *ns
+    spec:
+      containers:
+        - name: *app
+          image: quay.io/utilitywarehouse/proximo:latest
+          args:
+            - /proximo-server
+            - kafka
+          env:
+            - name: PROXIMO_KAFKA_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-brokers
+                  key: internal.kafka.broker.version
+            - name: PROXIMO_KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: kafka-brokers
+                  key: internal.kafka.brokers
+            - name: PROXIMO_PROBE_PORT
+              value: "8080"
+            - name: PROXIMO_PORT
+              value: "6868"
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /__/ready
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          ports:
+            - containerPort: 6868
+              name: proximo
+              protocol: TCP
+            - containerPort: 8080
+              name: proximo-probe
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /__/ready
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 10
+          resources:
+            limits:
+              memory: 512Mi
+---
